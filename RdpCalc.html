@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Remote Desktop Window Calculator</title>
+	<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+	<style type="text/css">
+		body
+		{
+			font-family: Arial, Helvetica, sans-serif;
+		}
+
+		.textArea
+		{
+			display: inline-block;
+			padding: 10px;
+			border: 1px solid black;
+			user-select: all;
+			white-space: pre-line;
+			font-family: Consolas, monospace;
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<h1>Remote Desktop Window Calculator</h1>
+		<p>This tool helps generate a .rdp file that positions the Remote Desktop window on a 100% DPI display in Windows, as close to fullscreen as possible without being fullscreen, with minimal borders/margin, and no need to move or resize the RDP window after it is created.</p>
+		<p>What address shall we connect to? <input type="text" v-model="address" /></p>
+		<p>Tell me about the monitor you want it displayed on:</p>
+		<p>Width: <input type="number" v-model="monWidthPx" /> px</p>
+		<p>Height: <input type="number" v-model="monHeightPx" /> px</p>
+		<p>If the monitor's top left pixel is not at coordinate 0,0, you may need to adjust these offsets. The "ColorPix" program can provide the offset of your mouse pointer.</p>
+		<p>X Offset: <input type="number" v-model="monXOffsetPx" /> px</p>
+		<p>Y Offset: <input type="number" v-model="monYOffsetPx" /> px</p>
+		<p>Remote Desktop windows can't be automatically positioned within 8px of the edges of my primary display due to window shadows or something, with the exception that the top can be positioned within 1px.</p>
+		<p>Keep-out Left: <input type="number" v-model="keepoutLeftPx" /> px</p>
+		<p>Keep-out Top: <input type="number" v-model="keepoutTopPx" /> px</p>
+		<p>Keep-out Right: <input type="number" v-model="keepoutRightPx" /> px</p>
+		<p>Keep-out Bottom: <input type="number" v-model="keepoutBottomPx" /> px</p>
+		<p>Set 0 in the Right and Bottom keepout fields to be able to resize the RDP window after it is created to better fill the screen.</p>
+		<p>Set 0 in the Left keepout field and be able to move the RDP window after it is created to better fill the screen.</p>
+		<p>
+			Does this monitor have a taskbar on the bottom? <input type="checkbox" v-model="monHasTaskbar" />
+			<template v-if="monHasTaskbar">
+				how tall is it?
+				<input type="number" v-model="monTaskbarHeightPx" /> px
+			</template>
+		</p>
+		<p>Height of window titlebar (not including border/shadow): <input type="number" v-model="windowTitlebarHeightPx" /> px</p>
+		<p>Your.rdp file content:</p>
+		<div class="textArea">
+			screen mode id:i:1
+			use multimon:i:0
+			desktopwidth:i:{{dw}}
+			desktopheight:i:{{dh}}
+			session bpp:i:24
+			winposstr:s:0,1,{{x1}},{{y1}},{{x2}},{{y2}}
+			compression:i:1
+			keyboardhook:i:2
+			audiocapturemode:i:0
+			videoplaybackmode:i:1
+			connection type:i:6
+			displayconnectionbar:i:1
+			disable wallpaper:i:0
+			allow font smoothing:i:1
+			allow desktop composition:i:1
+			disable full window drag:i:0
+			disable menu anims:i:1
+			disable themes:i:0
+			disable cursor setting:i:0
+			bitmapcachepersistenable:i:1
+			full address:s:{{address}}
+			audiomode:i:2
+			redirectprinters:i:0
+			redirectcomports:i:0
+			redirectsmartcards:i:1
+			redirectclipboard:i:1
+			redirectposdevices:i:0
+			redirectdirectx:i:1
+			autoreconnection enabled:i:1
+			authentication level:i:2
+			prompt for credentials:i:0
+			negotiate security layer:i:1
+			remoteapplicationmode:i:0
+			alternate shell:s:
+			shell working directory:s:
+			gatewayhostname:s:
+			gatewayusagemethod:i:4
+			gatewaycredentialssource:i:4
+			gatewayprofileusagemethod:i:0
+			promptcredentialonce:i:1
+			use redirection server name:i:0
+			drivestoredirect:s:
+			networkautodetect:i:0
+			bandwidthautodetect:i:1
+			enableworkspacereconnect:i:0
+			rdgiskdcproxy:i:0
+			kdcproxyname:s:
+			gatewaybrokeringtype:i:0
+		</div>
+		<p><input type="button" value="Reset To Defaults" @click="ResetToDefaults"/></p>
+	</div>
+	<script>
+		function makeNewData()
+		{
+			return {
+				str: "is the best text.",
+				address: localStorage.rdpCalcAddress ? localStorage.rdpCalcAddress : "127.0.0.1",
+				monWidthPx: 3840,
+				monHeightPx: 2160,
+				monXOffsetPx: 0,
+				monYOffsetPx: 0,
+				keepoutLeftPx: 8,
+				keepoutTopPx: 1,
+				keepoutRightPx: 8,
+				keepoutBottomPx: 8,
+				monHasTaskbar: true,
+				monTaskbarHeightPx: 30,
+				windowTitlebarHeightPx: 30
+			};
+		}
+		var appRoot = new Vue({
+			el: '#app',
+			data: makeNewData,
+			created: function ()
+			{
+				if (localStorage.rdpCalcData)
+				{
+					try
+					{
+						var storedData = JSON.parse(localStorage.rdpCalcData);
+						this.LoadDataObject(storedData);
+					}
+					catch (ex)
+					{
+						console.error(ex);
+					}
+				}
+			},
+			computed:
+			{
+				myData: function ()
+				{
+					return this.$data;
+				},
+				dw: function ()
+				{
+					var w = parseInt(this.monWidthPx);
+					w -= parseInt(this.keepoutLeftPx);
+					w -= parseInt(this.keepoutRightPx);
+					return w;
+				},
+				dh: function ()
+				{
+					var h = parseInt(this.monHeightPx);
+					h -= parseInt(this.keepoutTopPx);
+					h -= parseInt(this.keepoutBottomPx);
+					h -= parseInt(this.windowTitlebarHeightPx);
+					if (this.monHasTaskbar)
+						h -= parseInt(this.monTaskbarHeightPx);
+					return h;
+				},
+				x1: function ()
+				{
+					return parseInt(this.monXOffsetPx);
+				},
+				y1: function ()
+				{
+					return parseInt(this.monYOffsetPx);
+				},
+				x2: function ()
+				{
+					return parseInt(this.monXOffsetPx) + parseInt(this.monWidthPx);
+				},
+				y2: function ()
+				{
+					return parseInt(this.monYOffsetPx) + parseInt(this.monHeightPx);
+				}
+			},
+			methods:
+			{
+				ResetToDefaults: function()
+				{
+					this.LoadDataObject(makeNewData());
+				},
+				LoadDataObject: function (p)
+				{
+					try
+					{
+						for (var key in p)
+							if (p.hasOwnProperty(key))
+								this.$data[key] = p[key];
+					}
+					catch (ex)
+					{
+						console.error(ex);
+					}
+				}
+			},
+			watch:
+			{
+				$data: {
+					deep: true,
+					handler: function ()
+					{
+						localStorage.rdpCalcData = JSON.stringify(this.$data);
+					}
+				}
+			}
+		});
+	</script>
+</body>
+</html>
