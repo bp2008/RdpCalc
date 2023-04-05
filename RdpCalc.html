@@ -39,6 +39,7 @@
 		<p>Keep-out Bottom: <input type="number" v-model="keepoutBottomPx" /> px</p>
 		<p>Set 0 in the Right and Bottom keepout fields to be able to resize the RDP window after it is created to better fill the screen.</p>
 		<p>Set 0 in the Left keepout field and be able to move the RDP window after it is created to better fill the screen.</p>
+		<p>Set 0 in all keepout fields and subtract 7 from the "Height of window titlebar" to be able to maximize the window optimally.</p>
 		<p>
 			Does this monitor have a taskbar on the bottom? <input type="checkbox" v-model="monHasTaskbar" />
 			<template v-if="monHasTaskbar">
@@ -98,7 +99,7 @@
 			kdcproxyname:s:
 			gatewaybrokeringtype:i:0
 		</div>
-		<p><input type="button" value="Reset To Defaults" @click="ResetToDefaults"/></p>
+		<p><input type="button" value="Reset To Defaults" @click="ResetToDefaults"/> <input type="button" value="Optimize for Maximized Window" @click="MaximizeOptimally" /></p>
 	</div>
 	<script>
 		function makeNewData()
@@ -179,7 +180,7 @@
 			},
 			methods:
 			{
-				ResetToDefaults: function()
+				ResetToDefaults: function ()
 				{
 					this.LoadDataObject(makeNewData());
 				},
@@ -195,6 +196,14 @@
 					{
 						console.error(ex);
 					}
+				},
+				MaximizeOptimally: function ()
+				{
+					this.keepoutLeftPx: 0,
+					this.keepoutTopPx: 0,
+					this.keepoutRightPx: 0,
+					this.keepoutBottomPx: 0,
+					this.windowTitlebarHeightPx: 23
 				}
 			},
 			watch:
